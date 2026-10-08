@@ -1,15 +1,15 @@
 module Main exposing (main)
 
 import Browser
-import Html exposing (Html, button, div, h1, hr, input, text)
+import Html exposing (Html, button, div, h1, input, text)
 import Html.Attributes exposing (class, placeholder, value)
 import Html.Events exposing (onClick, onInput)
 
 
 type Status
     = Completed
-    | NeedHelp
     | Incomplete
+    | NeedHelp
 
 
 type alias Task =
@@ -122,11 +122,10 @@ statusToString status =
         Completed ->
             "Completed"
 
-        NeedHelp ->
-            "Need Help"
-
         Incomplete ->
             "Incomplete"
+        NeedHelp -> 
+            "Need Help"
 
 
 statusClass : Status -> String
@@ -135,11 +134,11 @@ statusClass status =
         Completed ->
             "status-completed"
 
-        NeedHelp ->
-            "status-needhelp"
-
         Incomplete ->
             "status-incomplete"
+
+        NeedHelp -> 
+            "status-needHelp"
 
 
 update : Msg -> Model -> Model
@@ -226,8 +225,8 @@ view model =
                     []
                 , button [ class "btn", onClick RemoveTask ] [ text "Remove" ]
                 , button [ class "btn", onClick (SetStatus Incomplete) ] [ text "Incomplete" ]
-                , button [ class "btn", onClick (SetStatus NeedHelp) ] [ text "Need Help" ]
                 , button [ class "btn", onClick (SetStatus Completed) ] [ text "Completed" ]
+                , button [ class "btn", onClick (SetStatus NeedHelp) ] [ text "Need Help" ]
                 ]
 
             , case model.error of
@@ -338,13 +337,13 @@ stylesheet =
             background: #eee;
             color: #555;
         }
-        .status-needhelp {
-            background: #fff3cd;
-            color: #8a6d3b;
-        }
         .status-completed {
             background: #d4edda;
             color: #2e7d32;
+        }
+        .status-needHelp{
+            background: #light-red;
+            color: #green;
         }
         .empty {
             color: #999;
