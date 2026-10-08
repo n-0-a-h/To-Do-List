@@ -1,0 +1,14 @@
+{
+  "dependencies": {
+    "elm": "^0.19.3-0",
+    "elm-format": "^0.8.8",
+    "elm-test": "^0.19.3-0",
+    "elm-watch": "^1.2.8",
+    "serve": "^14.2.6"
+  },
+  "scripts": {
+    "start": "npx npm-run-all --parallel elm serve",
+    "elm": "npx elm-watch hot",
+    "serve": "npx serve"
+  }
+}
