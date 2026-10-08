@@ -2,7 +2,7 @@ module Main exposing (main)
 
 import Browser
 import Html exposing (Html, button, div, h1, hr, input, text)
-import Html.Attributes exposing (placeholder, style, value)
+import Html.Attributes exposing (class, placeholder, value)
 import Html.Events exposing (onClick, onInput)
 
 
@@ -46,8 +46,6 @@ init =
     }
 
 
-{-| Add a new task to the front of the list.
--}
 addTask : String -> Int -> List Task -> List Task
 addTask title id tasks =
     { id = id
@@ -57,14 +55,6 @@ addTask title id tasks =
         :: tasks
 
 
-{-| Remove the first task with the given ID.
-
-Recursion idea:
-- If the list is empty, the ID was not found -> Nothing.
-- If the first task matches, return the rest of the list.
-- Otherwise, recurse on the rest, then rebuild the list with the first task.
-
--}
 removeTask : Int -> List Task -> Maybe (List Task)
 removeTask targetId tasks =
     case tasks of
@@ -84,12 +74,6 @@ removeTask targetId tasks =
                         Nothing
 
 
-{-| Update the status of the first task with the given ID.
-
-This uses the same recursive shape as removeTask, but instead of dropping the
-matching task, it replaces it with an updated record.
-
--}
 updateStatus : Int -> Status -> List Task -> Maybe (List Task)
 updateStatus targetId newStatus tasks =
     case tasks of
@@ -109,13 +93,11 @@ updateStatus targetId newStatus tasks =
                         Nothing
 
 
-{-| Render all tasks recursively. No List.map here.
--}
 renderTasks : List Task -> Html Msg
 renderTasks tasks =
     case tasks of
         [] ->
-            text "No tasks yet."
+            div [ class "empty" ] [ text "No tasks yet." ]
 
         task :: rest ->
             div []
@@ -126,15 +108,11 @@ renderTasks tasks =
 
 renderTask : Task -> Html Msg
 renderTask task =
-    div []
-        [ text
-            (String.fromInt task.id
-                ++ ": "
-                ++ task.title
-                ++ " ["
-                ++ statusToString task.status
-                ++ "]"
-            )
+    div [ class "task" ]
+        [ div [ class "task-id" ] [ text ("#" ++ String.fromInt task.id) ]
+        , div [ class "task-title" ] [ text task.title ]
+        , div [ class ("status " ++ statusClass task.status) ]
+            [ text (statusToString task.status) ]
         ]
 
 
@@ -149,6 +127,19 @@ statusToString status =
 
         Incomplete ->
             "Incomplete"
+
+
+statusClass : Status -> String
+statusClass status =
+    case status of
+        Completed ->
+            "status-completed"
+
+        NeedHelp ->
+            "status-needhelp"
+
+        Incomplete ->
+            "status-incomplete"
 
 
 update : Msg -> Model -> Model
@@ -210,48 +201,157 @@ update msg model =
 view : Model -> Html Msg
 view model =
     div []
-        [ h1 [] [ text "Todo List" ]
+        [ stylesheet
+        , div [ class "container" ]
+            [ h1 [ class "title" ] [ text "Todo List" ]
 
-        -- Add task
-        , input
-            [ placeholder "New task"
-            , value model.newTitle
-            , onInput NewTitleChanged
+            , div [ class "row" ]
+                [ input
+                    [ class "input"
+                    , placeholder "New task"
+                    , value model.newTitle
+                    , onInput NewTitleChanged
+                    ]
+                    []
+                , button [ class "btn primary", onClick AddTask ] [ text "Add" ]
+                ]
+
+            , div [ class "row" ]
+                [ input
+                    [ class "input small"
+                    , placeholder "Task ID"
+                    , value model.targetId
+                    , onInput TargetIdChanged
+                    ]
+                    []
+                , button [ class "btn", onClick RemoveTask ] [ text "Remove" ]
+                , button [ class "btn", onClick (SetStatus Incomplete) ] [ text "Incomplete" ]
+                , button [ class "btn", onClick (SetStatus NeedHelp) ] [ text "Need Help" ]
+                , button [ class "btn", onClick (SetStatus Completed) ] [ text "Completed" ]
+                ]
+
+            , case model.error of
+                Just err ->
+                    div [ class "error" ] [ text err ]
+
+                Nothing ->
+                    text ""
+
+            , div [ class "list" ] [ renderTasks model.tasks ]
             ]
-            []
-        , button [ onClick AddTask ] [ text "Add" ]
-
-        , hr [] []
-
-        -- Target ID for remove/update
-        , input
-            [ placeholder "Task ID"
-            , value model.targetId
-            , onInput TargetIdChanged
-            ]
-            []
-        , button [ onClick RemoveTask ] [ text "Remove by ID" ]
-
-        -- Status buttons
-        , div []
-            [ button [ onClick (SetStatus Incomplete) ] [ text "Set Incomplete" ]
-            , button [ onClick (SetStatus NeedHelp) ] [ text "Set Need Help" ]
-            , button [ onClick (SetStatus Completed) ] [ text "Set Completed" ]
-            ]
-
-        -- Error message
-        , case model.error of
-            Just err ->
-                div [ style "color" "red" ] [ text err ]
-
-            Nothing ->
-                text ""
-
-        , hr [] []
-
-        -- Task list, rendered recursively
-        , renderTasks model.tasks
         ]
+
+
+stylesheet : Html msg
+stylesheet =
+    Html.node "style"
+        []
+        [ text """
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: #f4f5f7;
+            color: #222;
+        }
+        .container {
+            max-width: 520px;
+            margin: 40px auto;
+            padding: 24px;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+        }
+        .title {
+            margin: 0 0 16px;
+            font-size: 22px;
+        }
+        .row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+        .input {
+            flex: 1;
+            padding: 8px 10px;
+            font-size: 14px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            outline: none;
+        }
+        .input.small {
+            max-width: 100px;
+        }
+        .input:focus {
+            border-color: #4a90e2;
+        }
+        .btn {
+            padding: 8px 12px;
+            font-size: 14px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            background: #fafafa;
+            cursor: pointer;
+        }
+        .btn:hover {
+            background: #f0f0f0;
+        }
+        .btn.primary {
+            background: #4a90e2;
+            border-color: #4a90e2;
+            color: white;
+        }
+        .btn.primary:hover {
+            background: #3a7bc8;
+        }
+        .error {
+            color: #c0392b;
+            font-size: 13px;
+            margin: 6px 0;
+        }
+        .list {
+            margin-top: 16px;
+            border-top: 1px solid #eee;
+        }
+        .task {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .task-id {
+            font-size: 12px;
+            color: #999;
+            min-width: 32px;
+        }
+        .task-title {
+            flex: 1;
+            font-size: 14px;
+        }
+        .status {
+            font-size: 12px;
+            padding: 3px 8px;
+            border-radius: 999px;
+        }
+        .status-incomplete {
+            background: #eee;
+            color: #555;
+        }
+        .status-needhelp {
+            background: #fff3cd;
+            color: #8a6d3b;
+        }
+        .status-completed {
+            background: #d4edda;
+            color: #2e7d32;
+        }
+        .empty {
+            color: #999;
+            font-size: 14px;
+            padding: 12px 0;
+        }
+        """ ]
 
 
 main : Program () Model Msg
