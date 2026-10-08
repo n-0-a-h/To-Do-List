@@ -12,10 +12,17 @@ type Status
     | NeedHelp
 
 
+type Priority
+    = Low
+    | Medium
+    | High
+
+
 type alias Task =
     { id : Int
     , title : String
     , status : Status
+    , priority : Priority
     }
 
 
@@ -34,6 +41,7 @@ type Msg
     | TargetIdChanged String
     | RemoveTask
     | SetStatus Status
+    | SetPriority Priority
 
 
 init : Model
@@ -51,6 +59,7 @@ addTask title id tasks =
     { id = id
     , title = title
     , status = Incomplete
+    , priority = Medium
     }
         :: tasks
 
@@ -93,6 +102,28 @@ updateStatus targetId newStatus tasks =
                         Nothing
 
 
+{-| Same recursive shape as updateStatus. Notice the symmetry — this is a
+prime candidate to refactor later into a single updateTaskById helper.
+-}
+updatePriority : Int -> Priority -> List Task -> Maybe (List Task)
+updatePriority targetId newPriority tasks =
+    case tasks of
+        [] ->
+            Nothing
+
+        task :: rest ->
+            if task.id == targetId then
+                Just ({ task | priority = newPriority } :: rest)
+
+            else
+                case updatePriority targetId newPriority rest of
+                    Just newRest ->
+                        Just (task :: newRest)
+
+                    Nothing ->
+                        Nothing
+
+
 renderTasks : List Task -> Html Msg
 renderTasks tasks =
     case tasks of
@@ -111,6 +142,8 @@ renderTask task =
     div [ class "task" ]
         [ div [ class "task-id" ] [ text ("#" ++ String.fromInt task.id) ]
         , div [ class "task-title" ] [ text task.title ]
+        , div [ class ("priority " ++ priorityClass task.priority) ]
+            [ text (priorityToString task.priority) ]
         , div [ class ("status " ++ statusClass task.status) ]
             [ text (statusToString task.status) ]
         ]
@@ -124,7 +157,8 @@ statusToString status =
 
         Incomplete ->
             "Incomplete"
-        NeedHelp -> 
+
+        NeedHelp ->
             "Need Help"
 
 
@@ -137,8 +171,34 @@ statusClass status =
         Incomplete ->
             "status-incomplete"
 
-        NeedHelp -> 
+        NeedHelp ->
             "status-needHelp"
+
+
+priorityToString : Priority -> String
+priorityToString priority =
+    case priority of
+        Low ->
+            "Low"
+
+        Medium ->
+            "Medium"
+
+        High ->
+            "High"
+
+
+priorityClass : Priority -> String
+priorityClass priority =
+    case priority of
+        Low ->
+            "priority-low"
+
+        Medium ->
+            "priority-medium"
+
+        High ->
+            "priority-high"
 
 
 update : Msg -> Model -> Model
@@ -196,6 +256,23 @@ update msg model =
                         Nothing ->
                             { model | error = Just "No task with that ID." }
 
+        SetPriority priority ->
+            case String.toInt model.targetId of
+                Nothing ->
+                    { model | error = Just "ID must be a number." }
+
+                Just id ->
+                    case updatePriority id priority model.tasks of
+                        Just newTasks ->
+                            { model
+                                | tasks = newTasks
+                                , targetId = ""
+                                , error = Nothing
+                            }
+
+                        Nothing ->
+                            { model | error = Just "No task with that ID." }
+
 
 view : Model -> Html Msg
 view model =
@@ -204,6 +281,7 @@ view model =
         , div [ class "container" ]
             [ h1 [ class "title" ] [ text "Todo List" ]
 
+            -- Add
             , div [ class "row" ]
                 [ input
                     [ class "input"
@@ -215,6 +293,7 @@ view model =
                 , button [ class "btn primary", onClick AddTask ] [ text "Add" ]
                 ]
 
+            -- Target ID + remove
             , div [ class "row" ]
                 [ input
                     [ class "input small"
@@ -224,9 +303,20 @@ view model =
                     ]
                     []
                 , button [ class "btn", onClick RemoveTask ] [ text "Remove" ]
-                , button [ class "btn", onClick (SetStatus Incomplete) ] [ text "Incomplete" ]
-                , button [ class "btn", onClick (SetStatus Completed) ] [ text "Completed" ]
+                ]
+
+            -- Status
+            , div [ class "row" ]
+                [ button [ class "btn", onClick (SetStatus Incomplete) ] [ text "Incomplete" ]
                 , button [ class "btn", onClick (SetStatus NeedHelp) ] [ text "Need Help" ]
+                , button [ class "btn", onClick (SetStatus Completed) ] [ text "Completed" ]
+                ]
+
+            -- Priority
+            , div [ class "row" ]
+                [ button [ class "btn", onClick (SetPriority Low) ] [ text "Low" ]
+                , button [ class "btn", onClick (SetPriority Medium) ] [ text "Medium" ]
+                , button [ class "btn", onClick (SetPriority High) ] [ text "High" ]
                 ]
 
             , case model.error of
@@ -328,7 +418,7 @@ stylesheet =
             flex: 1;
             font-size: 14px;
         }
-        .status {
+        .status, .priority {
             font-size: 12px;
             padding: 3px 8px;
             border-radius: 999px;
@@ -341,9 +431,21 @@ stylesheet =
             background: #d4edda;
             color: #2e7d32;
         }
-        .status-needHelp{
-            background: #light-red;
-            color: #green;
+        .status-needHelp {
+            background: #fde2e2;
+            color: #b03030;
+        }
+        .priority-low {
+            background: #e6f0ff;
+            color: #2b5fa8;
+        }
+        .priority-medium {
+            background: #fff2cc;
+            color: #8a6d1b;
+        }
+        .priority-high {
+            background: #ffd9d9;
+            color: #a02020;
         }
         .empty {
             color: #999;
